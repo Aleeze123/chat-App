@@ -43,126 +43,6 @@
 
 
 
-import express from "express";
-import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// Database and Socket
-import { connectDB } from "./lib/db.js";
-import { app, server } from "./lib/socket.js";
-
-// Routes
-import authRoutes from "./routes/auth.route.js";
-import messageRoutes from "./routes/message.route.js";
-
-// Configurations
-dotenv.config();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const PORT = process.env.PORT || 5001;
-const isDev = process.env.NODE_ENV === "development";
-
-// 🌈 Development-Specific Configurations
-const devOrigins = [
-  "http://localhost:5173",  // Vite default
-  "http://127.0.0.1:5173",
-  "http://localhost:3000",  // Create-react-app default
-];
-
-// 🚀 Production Origins
-const prodOrigins = [
-  process.env.FRONTEND_URL,
-  "https://chat-app-1sc5.vercel.app",
-].filter(Boolean);
-
-// ✅ Dynamic CORS Configuration
-const allowedOrigins = isDev ? [...devOrigins, ...prodOrigins] : prodOrigins;
-
-console.log(`🌍 ${isDev ? "Development" : "Production"} Mode Activated`);
-console.log("🔄 Allowed Origins:", allowedOrigins);
-
-// 🔥 Middleware Stack
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use(cookieParser());
-
-// 🛡️ Enhanced CORS with Development Flexibility
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, curl, etc)
-      if (!origin && isDev) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`🚨 CORS Blocked: ${origin || "No origin"}`);
-        callback(isDev ? null : new Error("Not allowed by CORS"), isDev);
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
-  })
-);
-
-// ✈️ Preflight Handling
-app.options("*", cors());
-
-// 🚦 Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/messages", messageRoutes);
-
-// 📦 Static Files (Only in Production)
-if (!isDev) {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
-  });
-} else {
-  // 🛠️ Development-only routes
-  app.get("/api/dev", (req, res) => {
-    res.json({
-      status: "Development Mode",
-      message: "CORS is more permissive in development",
-      allowedOrigins
-    });
-  });
-}
-
-// 💣 Error Handling
-app.use((err, req, res, next) => {
-  console.error("🔥 Error:", err.stack);
-  res.status(500).json({
-    error: isDev ? err.message : "Something went wrong!",
-    stack: isDev ? err.stack : undefined
-  });
-});
-
-// 🏁 Server Start
-server.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`🔵 Mode: ${isDev ? "DEVELOPMENT" : "PRODUCTION"}`);
-  console.log(`🌐 Allowed origins:\n${allowedOrigins.map(o => `  - ${o}`).join("\n")}`);
-  connectDB().then(() => console.log("🟢 Database connected\n"));
-});
-
-// 🚨 Crash Protection
-process.on("unhandledRejection", (err) => {
-  console.error("💥 Unhandled Rejection:", err);
-  if (isDev) {
-    console.warn("⚠️  Not exiting in development mode");
-  } else {
-    server.close(() => process.exit(1));
-  }
-});
-
-
-
-
 // import express from "express";
 // import dotenv from "dotenv";
 // import cookieParser from "cookie-parser";
@@ -220,6 +100,135 @@ process.on("unhandledRejection", (err) => {
 //   connectDB();
 // });
 
+// 📁 backend/src/index.js
+
+import express from "express";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Database and Socket
+import { connectDB } from "./lib/db.js";
+import { app, server } from "./lib/socket.js";
+
+// Routes
+import authRoutes from "./routes/auth.route.js";
+import messageRoutes from "./routes/message.route.js";
+
+// Configurations
+dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 5001;
+const isDev = process.env.NODE_ENV === "development";
+
+// 🌈 Development-Specific Configurations
+const devOrigins = [
+  "http://localhost:5173",  // Vite default
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",  // CRA default
+];
+
+// 🚀 Production Origins
+const prodOrigins = [
+  process.env.FRONTEND_URL,
+  "https://chat-app-1sc5.vercel.app",  // fallback prod URL
+].filter(Boolean);
+
+// ✅ Dynamic CORS
+const allowedOrigins = isDev ? [...devOrigins, ...prodOrigins] : prodOrigins;
+
+console.log(`🌍 ${isDev ? "Development" : "Production"} Mode Activated`);
+console.log("🔄 Allowed Origins:", allowedOrigins);
+
+// 🔥 Middleware Stack
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+// 🛡️ CORS Setup
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin && isDev) return callback(null, true); // mobile apps, curl
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`🚨 CORS Blocked: ${origin || "No origin"}`);
+        callback(isDev ? null : new Error("Not allowed by CORS"), isDev);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+  })
+);
+
+// ✈️ Preflight Handling
+app.options("*", cors());
+
+// 🚦 Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/messages", messageRoutes);
+
+// 📦 Static Files Serve (for frontend)
+if (!isDev) {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
+  });
+} else {
+  app.get("/api/dev", (req, res) => {
+    res.json({
+      status: "Development Mode",
+      message: "CORS is more permissive in development",
+      allowedOrigins,
+    });
+  });
+}
+
+// 💣 Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error("🔥 Error:", err.stack);
+  res.status(500).json({
+    error: isDev ? err.message : "Something went wrong!",
+    stack: isDev ? err.stack : undefined,
+  });
+});
+
+// 🏁 Start Server
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log("🟢 Database connected");
+
+    server.listen(PORT, () => {
+      console.log(`\n🚀 Server running on port ${PORT}`);
+      console.log(`🔵 Mode: ${isDev ? "DEVELOPMENT" : "PRODUCTION"}`);
+      console.log(
+        `🌐 Allowed origins:\n${allowedOrigins.map((o) => `  - ${o}`).join("\n")}`
+      );
+    });
+  } catch (error) {
+    console.error("❌ Failed to connect to the database", error);
+    process.exit(1); // Crash app if DB failed
+  }
+};
+
+// Start server
+startServer();
+
+// 🚨 Crash Protection
+process.on("unhandledRejection", (err) => {
+  console.error("💥 Unhandled Rejection:", err);
+  if (isDev) {
+    console.warn("⚠️  Not exiting in development mode");
+  } else {
+    server.close(() => process.exit(1));
+  }
+});
 
 
 
