@@ -75,7 +75,7 @@ const devOrigins = [
 // 🚀 Production Origins
 const prodOrigins = [
   process.env.FRONTEND_URL,
-  "https://chatapp-eight-livid.vercel.app",
+  "https://chat-app-1sc5.vercel.app",
 ].filter(Boolean);
 
 // ✅ Dynamic CORS Configuration
