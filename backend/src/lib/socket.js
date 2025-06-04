@@ -50,8 +50,7 @@ const io = new Server(server, {
   cors: {
      origin: [
       "http://localhost:5173", 
-      "https://chatapp-eight-livid.vercel.app", 
-      "https://chatapp-38w5-d5lp4xe85-aleeze123s-projects.vercel.app"
+      "https://chat-app-umber-tau.vercel.app/"
     ],
   },
 });
